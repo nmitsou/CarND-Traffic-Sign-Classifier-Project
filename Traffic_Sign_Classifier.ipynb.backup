@@ -1,0 +1,996 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Self-Driving Car Engineer Nanodegree\n",
+    "\n",
+    "## Deep Learning\n",
+    "\n",
+    "## Project: Build a Traffic Sign Recognition Classifier\n",
+    "\n",
+    "In this notebook, a template is provided for you to implement your functionality in stages which is required to successfully complete this project. If additional code is required that cannot be included in the notebook, be sure that the Python code is successfully imported and included in your submission, if necessary. Sections that begin with **'Implementation'** in the header indicate where you should begin your implementation for your project. Note that some sections of implementation are optional, and will be marked with **'Optional'** in the header.\n",
+    "\n",
+    "In addition to implementing code, there will be questions that you must answer which relate to the project and your implementation. Each section where you will answer a question is preceded by a **'Question'** header. Carefully read each question and provide thorough answers in the following text boxes that begin with **'Answer:'**. Your project submission will be evaluated based on your answers to each of the questions and the implementation you provide.\n",
+    "\n",
+    ">**Note:** Code and Markdown cells can be executed using the **Shift + Enter** keyboard shortcut. In addition, Markdown cells can be edited by typically double-clicking the cell to enter edit mode."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "## Step 0: Load The Data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "# Load pickled data\n",
+    "import pickle\n",
+    "\n",
+    "# TODO: Fill this in based on where you saved the training and testing data<\n",
+    "\n",
+    "training_file = \"train.p\"\n",
+    "testing_file = \"test.p\"\n",
+    "\n",
+    "with open(training_file, mode='rb') as f:\n",
+    "    train = pickle.load(f)\n",
+    "with open(testing_file, mode='rb') as f:\n",
+    "    test = pickle.load(f)\n",
+    "    \n",
+    "X_train, y_train = train['features'], train['labels']\n",
+    "X_test, y_test = test['features'], test['labels']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "from sklearn.model_selection import train_test_split\n",
+    "\n",
+    "X_train, X_validation, y_train, y_validation = train_test_split(X_train, y_train, test_size=0.20, random_state=43)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "\n",
+    "## Step 1: Dataset Summary & Exploration\n",
+    "\n",
+    "The pickled data is a dictionary with 4 key/value pairs:\n",
+    "\n",
+    "- `'features'` is a 4D array containing raw pixel data of the traffic sign images, (num examples, width, height, channels).\n",
+    "- `'labels'` is a 2D array containing the label/class id of the traffic sign. The file `signnames.csv` contains id -> name mappings for each id.\n",
+    "- `'sizes'` is a list containing tuples, (width, height) representing the the original width and height the image.\n",
+    "- `'coords'` is a list containing tuples, (x1, y1, x2, y2) representing coordinates of a bounding box around the sign in the image. **THESE COORDINATES ASSUME THE ORIGINAL IMAGE. THE PICKLED DATA CONTAINS RESIZED VERSIONS (32 by 32) OF THESE IMAGES**\n",
+    "\n",
+    "Complete the basic data summary below."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Number of training examples = 31367\n",
+      "Number of testing examples = 12630\n",
+      "Image data shape = (32, 32, 3)\n",
+      "Number of classes = 43\n"
+     ]
+    }
+   ],
+   "source": [
+    "### Replace each question mark with the appropriate value.\n",
+    "\n",
+    "# TODO: Number of training examples\n",
+    "n_train = len(X_train)\n",
+    "\n",
+    "# TODO: Number of testing examples.\n",
+    "n_test = len(X_test)\n",
+    "\n",
+    "# TODO: What's the shape of an traffic sign image?\n",
+    "image_shape = X_train[0].shape\n",
+    "\n",
+    "# TODO: How many unique classes/labels there are in the dataset.\n",
+    "n_classes = 43\n",
+    "\n",
+    "print(\"Number of training examples =\", n_train)\n",
+    "print(\"Number of testing examples =\", n_test)\n",
+    "print(\"Image data shape =\", image_shape)\n",
+    "print(\"Number of classes =\", n_classes)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Visualize the German Traffic Signs Dataset using the pickled file(s). This is open ended, suggestions include: plotting traffic sign images, plotting the count of each sign, etc.\n",
+    "\n",
+    "The [Matplotlib](http://matplotlib.org/) [examples](http://matplotlib.org/examples/index.html) and [gallery](http://matplotlib.org/gallery.html) pages are a great resource for doing visualizations in Python.\n",
+    "\n",
+    "**NOTE:** It's recommended you start with something simple first. If you wish to do more, come back to it after you've completed the rest of the sections."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<matplotlib.figure.Figure at 0x7f3e4c37be80>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "### Unbalanced dataset\n",
+    "import matplotlib.pyplot as plt\n",
+    "plt.hist(y_train, list(range(0, n_classes)))\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "----\n",
+    "\n",
+    "## Step 2: Design and Test a Model Architecture\n",
+    "\n",
+    "Design and implement a deep learning model that learns to recognize traffic signs. Train and test your model on the [German Traffic Sign Dataset](http://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset).\n",
+    "\n",
+    "There are various aspects to consider when thinking about this problem:\n",
+    "\n",
+    "- Neural network architecture\n",
+    "- Play around preprocessing techniques (normalization, rgb to grayscale, etc)\n",
+    "- Number of examples per label (some have more than others).\n",
+    "- Generate fake data.\n",
+    "\n",
+    "Here is an example of a [published baseline model on this problem](http://yann.lecun.com/exdb/publis/pdf/sermanet-ijcnn-11.pdf). It's not required to be familiar with the approach used in the paper but, it's good practice to try to read papers like these.\n",
+    "\n",
+    "**NOTE:** The LeNet-5 implementation shown in the [classroom](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/6df7ae49-c61c-4bb2-a23e-6527e69209ec/lessons/601ae704-1035-4287-8b11-e2c2716217ad/concepts/d4aca031-508f-4e0b-b493-e7b706120f81) at the end of the CNN lesson is a solid starting point. You'll have to change the number of classes and possibly the preprocessing, but aside from that it's plug and play!"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Implementation\n",
+    "\n",
+    "Use the code cell (or multiple code cells, if necessary) to implement the first step of your project. Once you have completed your implementation and are satisfied with the results, be sure to thoroughly answer the questions that follow."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "### Preprocess the data here.\n",
+    "### Feel free to use as many code cells as needed.\n",
+    "\n",
+    "import cv2\n",
+    "\n",
+    "# Grayscales an image\n",
+    "def grayscale(img):\n",
+    "    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)\n",
+    "    return img\n",
+    "\n",
+    "def rgb2yuv(img):\n",
+    "    img = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)\n",
+    "    return img\n",
+    "\n",
+    "# Normalizes the data between -1 and 1 instead of 0 to 255    \n",
+    "def normalize(data):\n",
+    "    return data / 255.0\n",
+    "\n",
+    "# Iterates through grayscale for each image in the data\n",
+    "def preprocess(data):\n",
+    "    images = []\n",
+    "    for image in data:\n",
+    "#        gray = rgb2yuv(image)\n",
+    "#        gray = grayscale(image)\n",
+    "#        gray = normalize(image)\n",
+    "        images.append(image)\n",
+    "        \n",
+    "    return np.array(images)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "import cv2\n",
+    "def transform_image(img,ang_range,shear_range,trans_range):\n",
+    "    '''\n",
+    "    This function transforms images to generate new images.\n",
+    "    The function takes in following arguments,\n",
+    "    1- Image\n",
+    "    2- ang_range: Range of angles for rotation\n",
+    "    3- shear_range: Range of values to apply affine transform to\n",
+    "    4- trans_range: Range of values to apply translations over. \n",
+    "    \n",
+    "    A Random uniform distribution is used to generate different parameters for transformation\n",
+    "    \n",
+    "    '''\n",
+    "    # Rotation\n",
+    "\n",
+    "    ang_rot = np.random.uniform(ang_range)-ang_range/2\n",
+    "    rows,cols,ch = img.shape    \n",
+    "    Rot_M = cv2.getRotationMatrix2D((cols/2,rows/2),ang_rot,1)\n",
+    "\n",
+    "    # Translation\n",
+    "    tr_x = trans_range*np.random.uniform()-trans_range/2\n",
+    "    tr_y = trans_range*np.random.uniform()-trans_range/2\n",
+    "    Trans_M = np.float32([[1,0,tr_x],[0,1,tr_y]])\n",
+    "\n",
+    "    # Shear\n",
+    "    pts1 = np.float32([[5,5],[20,5],[5,20]])\n",
+    "\n",
+    "    pt1 = 5+shear_range*np.random.uniform()-shear_range/2\n",
+    "    pt2 = 20+shear_range*np.random.uniform()-shear_range/2\n",
+    "\n",
+    "    pts2 = np.float32([[pt1,5],[pt2,pt1],[5,pt2]])\n",
+    "\n",
+    "    shear_M = cv2.getAffineTransform(pts1,pts2)\n",
+    "        \n",
+    "    img = cv2.warpAffine(img,Rot_M,(cols,rows))\n",
+    "    img = cv2.warpAffine(img,Trans_M,(cols,rows))\n",
+    "    img = cv2.warpAffine(img,shear_M,(cols,rows))\n",
+    "    \n",
+    "    return img"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "NameError",
+     "evalue": "name 'random' is not defined",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-8-9d68502d152e>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[1;32m      2\u001b[0m \u001b[0mplt\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfigure\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mfigsize\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m1\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;36m1\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      3\u001b[0m \u001b[0;31m#plt.imshow(transform_image(X_train[4],20,10,5))\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 4\u001b[0;31m \u001b[0mplt\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mimshow\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mX_train\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0mrandom\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mrandint\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m0\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mlen\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mX_train\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+      "\u001b[0;31mNameError\u001b[0m: name 'random' is not defined"
+     ]
+    }
+   ],
+   "source": [
+    "#for img in X_train:\n",
+    "plt.figure(figsize=(1,1))\n",
+    "#plt.imshow(transform_image(X_train[4],20,10,5))\n",
+    "plt.imshow((X_train[random.randint(0, len(X_train))]))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 42,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "X_train = preprocess(X_train)\n",
+    "X_test = preprocess(X_test)\n",
+    "X_validation = preprocess(X_validation)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 43,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.image.AxesImage at 0x7f55458dd240>"
+      ]
+     },
+     "execution_count": 43,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "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\nD+kS9PuQ/h/6w09O58t6MQAAAABJRU5ErkJggg==\n",
+      "text/plain": [
+       "<matplotlib.figure.Figure at 0x7f5545bc4240>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "%matplotlib inline\n",
+    "\n",
+    "index = random.randint(0, len(X_train))\n",
+    "image = X_train[index].squeeze()\n",
+    "plt.figure(figsize=(1,1))\n",
+    "plt.imshow(image)\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Answer:**"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "### Generate data additional data (OPTIONAL!)\n",
+    "### and split the data into training/validation/testing sets here.\n",
+    "### Feel free to use as many code cells as needed."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "from scipy import ndimage\n",
+    "\n",
+    "initial_size = len(X_train)\n",
+    "#print(initial_size)\n",
+    "\n",
+    "hist, bin_edges = np.histogram(y_train, bins=list(range(0, n_classes+1)))\n",
+    "max_class = max(hist)\n",
+    "\n",
+    "#print(y_train.shape)\n",
+    "for i in bin_edges:\n",
+    "    if i == 43:\n",
+    "        continue\n",
+    "    print(\"Balancing class: \"+str(i))\n",
+    "    if (hist[i]>max_class/4):\n",
+    "        continue\n",
+    "    else:\n",
+    "        inverseIndex = np.where(y_train == i)\n",
+    "        added = 0\n",
+    "        for k in inverseIndex[0]:\n",
+    "            #print(added+hist[i])\n",
+    "            if (added + hist[i] > max_class/4):\n",
+    "                break\n",
+    "            for j in range(5):\n",
+    "                added = added + 1\n",
+    "                initial_img = X_train[k]\n",
+    "                #img = transform_image(initial_img,20,10,5)\n",
+    "\n",
+    "                ang_rot = np.random.uniform(50)-25\n",
+    "                img = ndimage.rotate(initial_img, np.random.uniform(ang_rot), reshape=False)\n",
+    "\n",
+    "                X_train = np.append(X_train, [img], axis=0)\n",
+    "\n",
+    "                plt.imshow(img)\n",
+    "                y_train = np.append(y_train, [y_train[k]], axis=0)\n",
+    "\n",
+    "print(\"Done!\")                                                \n",
+    "initial_size = len(X_train)\n",
+    "#print(initial_size)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<matplotlib.figure.Figure at 0x7f551be10550>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "### More balanced dataset\n",
+    "import matplotlib.pyplot as plt\n",
+    "plt.hist(y_train, list(range(0, n_classes)))\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.utils import shuffle\n",
+    "X_train, y_train = shuffle(X_train, y_train)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Question 2\n",
+    "\n",
+    "_Describe how you set up the training, validation and testing data for your model. **Optional**: If you generated additional data, how did you generate the data? Why did you generate the data? What are the differences in the new dataset (with generated data) from the original dataset?_"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Answer:**"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "### Define your architecture here.\n",
+    "### Feel free to use as many code cells as needed."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from tensorflow.contrib.layers import flatten\n",
+    "\n",
+    "def LeNet(x):    \n",
+    "    # Hyperparameters\n",
+    "    # mu = 0\n",
+    "    # sigma = 0.1\n",
+    "    \n",
+    "    # SOLUTION: Layer 1: Convolutional. Input = 32x32x1. Output = 28x28x6.\n",
+    "    conv1_W = tf.get_variable(\"conv1_W\", shape=[5, 5, 3, 6], initializer=tf.contrib.layers.xavier_initializer())\n",
+    "    #conv1_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 3, 6), mean = mu, stddev = sigma))\n",
+    "    conv1_b = tf.Variable(tf.zeros(6))\n",
+    "    conv1   = tf.nn.conv2d(x, conv1_W, strides=[1, 1, 1, 1], padding='VALID') + conv1_b\n",
+    "\n",
+    "    # SOLUTION: Activation.\n",
+    "    conv1 = tf.nn.relu(conv1)\n",
+    "\n",
+    "    # SOLUTION: Pooling. Input = 28x28x6. Output = 14x14x6.\n",
+    "    conv1 = tf.nn.avg_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')\n",
+    "\n",
+    "    # SOLUTION: Layer 2: Convolutional. Output = 10x10x16.\n",
+    "    conv2_W = tf.get_variable(\"conv2_W\", shape=[5, 5, 6, 16], initializer=tf.contrib.layers.xavier_initializer())\n",
+    "    #conv2_W = tf.Variable(tf.truncated_normal(shape=(5, 5, 6, 16), mean = mu, stddev = sigma))\n",
+    "    conv2_b = tf.Variable(tf.zeros(16))\n",
+    "    conv2   = tf.nn.conv2d(conv1, conv2_W, strides=[1, 1, 1, 1], padding='VALID') + conv2_b\n",
+    "    \n",
+    "    # SOLUTION: Activation.\n",
+    "    conv2 = tf.nn.relu(conv2)\n",
+    "\n",
+    "    # SOLUTION: Pooling. Input = 10x10x16. Output = 5x5x16.\n",
+    "    conv2 = tf.nn.avg_pool(conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID')\n",
+    "\n",
+    "    # SOLUTION: Flatten. Input = 5x5x16. Output = 400.\n",
+    "    fc0   = flatten(conv2)\n",
+    "    \n",
+    "    # SOLUTION: Layer 3: Fully Connected. Input = 400. Output = 240.\n",
+    "    # fc1_W = tf.Variable(tf.truncated_normal(shape=(400, 240), mean = mu, stddev = sigma))\n",
+    "    fc1_W = tf.get_variable(\"fc1_W\", shape=[400, 240], initializer=tf.contrib.layers.xavier_initializer())\n",
+    "    fc1_b = tf.Variable(tf.zeros(240))\n",
+    "    fc1   = tf.matmul(fc0, fc1_W) + fc1_b\n",
+    "    \n",
+    "    # SOLUTION: Activation.\n",
+    "    fc1    = tf.nn.relu(fc1)\n",
+    "    \n",
+    "    # Dropout\n",
+    "    fc1 = tf.nn.dropout(fc1, keep_prob)\n",
+    "  \n",
+    "\n",
+    "    # SOLUTION: Layer 4: Fully Connected. Input = 240. Output = 120.\n",
+    "    fc2_W = tf.get_variable(\"fc2_W\", shape=[240, 120], initializer=tf.contrib.layers.xavier_initializer())\n",
+    "    #fc2_W  = tf.Variable(tf.truncated_normal(shape=(240, 184), mean = mu, stddev = sigma))\n",
+    "    fc2_b  = tf.Variable(tf.zeros(120))\n",
+    "    fc2    = tf.matmul(fc1, fc2_W) + fc2_b\n",
+    "    \n",
+    "    # SOLUTION: Activation.\n",
+    "    fc2    = tf.nn.relu(fc2)\n",
+    "    \n",
+    "    # Dropout\n",
+    "    fc2 = tf.nn.dropout(fc2, keep_prob)\n",
+    "  \n",
+    "\n",
+    "    # SOLUTION: Layer 5: Fully Connected. Input = 120. Output = 43.\n",
+    "    fc3_W = tf.get_variable(\"fc3_W\", shape=[120, 43], initializer=tf.contrib.layers.xavier_initializer())\n",
+    "    #fc3_W  = tf.Variable(tf.truncated_normal(shape=(184, 43), mean = mu, stddev = sigma))\n",
+    "    fc3_b  = tf.Variable(tf.zeros(43))\n",
+    "    logits = tf.matmul(fc2, fc3_W) + fc3_b\n",
+    "    \n",
+    "    return logits"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "import tensorflow as tf\n",
+    "\n",
+    "x = tf.placeholder(tf.float32, (None, 32, 32, 3))\n",
+    "y = tf.placeholder(tf.int32, (None))\n",
+    "keep_prob = tf.placeholder(tf.float32)\n",
+    "one_hot_y = tf.one_hot(y, n_classes)\n",
+    "\n",
+    "rate = 0.001\n",
+    "\n",
+    "logits = LeNet(x)\n",
+    "cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, one_hot_y)\n",
+    "loss_operation = tf.reduce_mean(cross_entropy)\n",
+    "optimizer = tf.train.AdamOptimizer(learning_rate = rate)\n",
+    "training_operation = optimizer.minimize(loss_operation)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(one_hot_y, 1))\n",
+    "accuracy_operation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))\n",
+    "saver = tf.train.Saver()\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Question 3\n",
+    "\n",
+    "_What does your final architecture look like? (Type of model, layers, sizes, connectivity, etc.)  For reference on how to build a deep neural network using TensorFlow, see [Deep Neural Network in TensorFlow\n",
+    "](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/6df7ae49-c61c-4bb2-a23e-6527e69209ec/lessons/b516a270-8600-4f93-a0a3-20dfeabe5da6/concepts/83a3a2a2-a9bd-4b7b-95b0-eb924ab14432) from the classroom._\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Answer:**"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "### Train your model here.\n",
+    "### Feel free to use as many code cells as needed."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Training...\n",
+      "\n"
+     ]
+    },
+    {
+     "ename": "TypeError",
+     "evalue": "Cannot interpret feed_dict key as Tensor: Tensor Tensor(\"Placeholder:0\", shape=(?, 32, 32, 3), dtype=float32) is not an element of this graph.",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mValueError\u001b[0m                                Traceback (most recent call last)",
+      "\u001b[0;32m/home/carnd/anaconda3/envs/carnd-term1/lib/python3.5/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36m_run\u001b[0;34m(self, handle, fetches, feed_dict, options, run_metadata)\u001b[0m\n\u001b[1;32m    917\u001b[0m             subfeed_t = self.graph.as_graph_element(subfeed, allow_tensor=True,\n\u001b[0;32m--> 918\u001b[0;31m                                                     allow_operation=False)\n\u001b[0m\u001b[1;32m    919\u001b[0m           \u001b[0;32mexcept\u001b[0m \u001b[0mException\u001b[0m \u001b[0;32mas\u001b[0m \u001b[0me\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/carnd/anaconda3/envs/carnd-term1/lib/python3.5/site-packages/tensorflow/python/framework/ops.py\u001b[0m in \u001b[0;36mas_graph_element\u001b[0;34m(self, obj, allow_tensor, allow_operation)\u001b[0m\n\u001b[1;32m   2317\u001b[0m     \u001b[0;32mwith\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_lock\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 2318\u001b[0;31m       \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_as_graph_element_locked\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mobj\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mallow_tensor\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mallow_operation\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   2319\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/carnd/anaconda3/envs/carnd-term1/lib/python3.5/site-packages/tensorflow/python/framework/ops.py\u001b[0m in \u001b[0;36m_as_graph_element_locked\u001b[0;34m(self, obj, allow_tensor, allow_operation)\u001b[0m\n\u001b[1;32m   2396\u001b[0m       \u001b[0;32mif\u001b[0m \u001b[0mobj\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mgraph\u001b[0m \u001b[0;32mis\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 2397\u001b[0;31m         \u001b[0;32mraise\u001b[0m \u001b[0mValueError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"Tensor %s is not an element of this graph.\"\u001b[0m \u001b[0;34m%\u001b[0m \u001b[0mobj\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   2398\u001b[0m       \u001b[0;32mreturn\u001b[0m \u001b[0mobj\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mValueError\u001b[0m: Tensor Tensor(\"Placeholder:0\", shape=(?, 32, 32, 3), dtype=float32) is not an element of this graph.",
+      "\nDuring handling of the above exception, another exception occurred:\n",
+      "\u001b[0;31mTypeError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-27-6962d6821063>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[1;32m     27\u001b[0m             \u001b[0mend\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0moffset\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0mBATCH_SIZE\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     28\u001b[0m             \u001b[0mbatch_x\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mbatch_y\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mX_train\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0moffset\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0mend\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0my_train\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0moffset\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0mend\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 29\u001b[0;31m             \u001b[0msess\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mrun\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mtraining_operation\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mfeed_dict\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;34m{\u001b[0m\u001b[0mx\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mbatch_x\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0my\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mbatch_y\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mkeep_prob\u001b[0m \u001b[0;34m:\u001b[0m \u001b[0;36m0.6\u001b[0m\u001b[0;34m}\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     30\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     31\u001b[0m         \u001b[0mvalidation_accuracy\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mevaluate\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mX_validation\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0my_validation\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/carnd/anaconda3/envs/carnd-term1/lib/python3.5/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36mrun\u001b[0;34m(self, fetches, feed_dict, options, run_metadata)\u001b[0m\n\u001b[1;32m    764\u001b[0m     \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    765\u001b[0m       result = self._run(None, fetches, feed_dict, options_ptr,\n\u001b[0;32m--> 766\u001b[0;31m                          run_metadata_ptr)\n\u001b[0m\u001b[1;32m    767\u001b[0m       \u001b[0;32mif\u001b[0m \u001b[0mrun_metadata\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    768\u001b[0m         \u001b[0mproto_data\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mtf_session\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mTF_GetBuffer\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mrun_metadata_ptr\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/carnd/anaconda3/envs/carnd-term1/lib/python3.5/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36m_run\u001b[0;34m(self, handle, fetches, feed_dict, options, run_metadata)\u001b[0m\n\u001b[1;32m    919\u001b[0m           \u001b[0;32mexcept\u001b[0m \u001b[0mException\u001b[0m \u001b[0;32mas\u001b[0m \u001b[0me\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    920\u001b[0m             raise TypeError('Cannot interpret feed_dict key as Tensor: '\n\u001b[0;32m--> 921\u001b[0;31m                             + e.args[0])\n\u001b[0m\u001b[1;32m    922\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    923\u001b[0m           \u001b[0;32mif\u001b[0m \u001b[0misinstance\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0msubfeed_val\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mops\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mTensor\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mTypeError\u001b[0m: Cannot interpret feed_dict key as Tensor: Tensor Tensor(\"Placeholder:0\", shape=(?, 32, 32, 3), dtype=float32) is not an element of this graph."
+     ]
+    }
+   ],
+   "source": [
+    "\n",
+    "tf.reset_default_graph()\n",
+    "\n",
+    "EPOCHS = 80\n",
+    "BATCH_SIZE = 350\n",
+    "\n",
+    "def evaluate(X_data, y_data):\n",
+    "    num_examples = len(X_data)\n",
+    "    total_accuracy = 0\n",
+    "    sess = tf.get_default_session()\n",
+    "    for offset in range(0, num_examples, BATCH_SIZE):\n",
+    "        batch_x, batch_y = X_data[offset:offset+BATCH_SIZE], y_data[offset:offset+BATCH_SIZE]\n",
+    "        accuracy = sess.run(accuracy_operation, feed_dict={x: batch_x, y: batch_y, keep_prob : 1.0})\n",
+    "        total_accuracy += (accuracy * len(batch_x))\n",
+    "    return total_accuracy / num_examples\n",
+    "\n",
+    "with tf.Session() as sess:\n",
+    "    sess.run(tf.global_variables_initializer())\n",
+    "    num_examples = len(X_train)\n",
+    "    validation_accuracy_array = []\n",
+    "    \n",
+    "    print(\"Training...\")\n",
+    "    print()\n",
+    "    for i in range(EPOCHS):\n",
+    "        X_train, y_train = shuffle(X_train, y_train)\n",
+    "        for offset in range(0, num_examples, BATCH_SIZE):\n",
+    "            end = offset + BATCH_SIZE\n",
+    "            batch_x, batch_y = X_train[offset:end], y_train[offset:end]\n",
+    "            sess.run(training_operation, feed_dict={x: batch_x, y: batch_y, keep_prob : 0.6})\n",
+    "            \n",
+    "        validation_accuracy = evaluate(X_validation, y_validation)\n",
+    "        validation_accuracy_array.append(1 - validation_accuracy)\n",
+    "        \n",
+    "        print(\"EPOCH {} ...\".format(i+1)+\" Validation Accuracy = {:.3f}\".format(validation_accuracy))\n",
+    "        \n",
+    "        \n",
+    "    plt.plot(validation_accuracy_array)\n",
+    "    plt.xlabel('epoch')\n",
+    "    plt.ylabel('error')\n",
+    "    plt.show()\n",
+    "    \n",
+    "    saver.save(sess, './lenet.traffic.signs')\n",
+    "    print(\"Model saved\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "ename": "TypeError",
+     "evalue": "Cannot interpret feed_dict key as Tensor: The name 'save/Const:0' refers to a Tensor which does not exist. The operation, 'save/Const', does not exist in the graph.",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mKeyError\u001b[0m                                  Traceback (most recent call last)",
+      "\u001b[0;32m/home/carnd/anaconda3/envs/carnd-term1/lib/python3.5/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36m_run\u001b[0;34m(self, handle, fetches, feed_dict, options, run_metadata)\u001b[0m\n\u001b[1;32m    917\u001b[0m             subfeed_t = self.graph.as_graph_element(subfeed, allow_tensor=True,\n\u001b[0;32m--> 918\u001b[0;31m                                                     allow_operation=False)\n\u001b[0m\u001b[1;32m    919\u001b[0m           \u001b[0;32mexcept\u001b[0m \u001b[0mException\u001b[0m \u001b[0;32mas\u001b[0m \u001b[0me\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/carnd/anaconda3/envs/carnd-term1/lib/python3.5/site-packages/tensorflow/python/framework/ops.py\u001b[0m in \u001b[0;36mas_graph_element\u001b[0;34m(self, obj, allow_tensor, allow_operation)\u001b[0m\n\u001b[1;32m   2317\u001b[0m     \u001b[0;32mwith\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_lock\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 2318\u001b[0;31m       \u001b[0;32mreturn\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_as_graph_element_locked\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mobj\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mallow_tensor\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mallow_operation\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m   2319\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/carnd/anaconda3/envs/carnd-term1/lib/python3.5/site-packages/tensorflow/python/framework/ops.py\u001b[0m in \u001b[0;36m_as_graph_element_locked\u001b[0;34m(self, obj, allow_tensor, allow_operation)\u001b[0m\n\u001b[1;32m   2359\u001b[0m                          \u001b[0;34m\"exist. The operation, %s, does not exist in the \"\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 2360\u001b[0;31m                          \"graph.\" % (repr(name), repr(op_name)))\n\u001b[0m\u001b[1;32m   2361\u001b[0m         \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mKeyError\u001b[0m: \"The name 'save/Const:0' refers to a Tensor which does not exist. The operation, 'save/Const', does not exist in the graph.\"",
+      "\nDuring handling of the above exception, another exception occurred:\n",
+      "\u001b[0;31mTypeError\u001b[0m                                 Traceback (most recent call last)",
+      "\u001b[0;32m<ipython-input-22-565ba4fe2e66>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[0;31m# Launch the model on the test data\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      2\u001b[0m \u001b[0;32mwith\u001b[0m \u001b[0mtf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mSession\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mas\u001b[0m \u001b[0msess\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 3\u001b[0;31m     \u001b[0msaver\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mrestore\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0msess\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'./lenet.traffic.signs'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      4\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      5\u001b[0m     \u001b[0mtest_accuracy\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0msess\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mrun\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0maccuracy_operation\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mfeed_dict\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;34m{\u001b[0m\u001b[0mx\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mX_test\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0my\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0my_test\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mkeep_prob\u001b[0m \u001b[0;34m:\u001b[0m \u001b[0;36m1.0\u001b[0m\u001b[0;34m}\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/carnd/anaconda3/envs/carnd-term1/lib/python3.5/site-packages/tensorflow/python/training/saver.py\u001b[0m in \u001b[0;36mrestore\u001b[0;34m(self, sess, save_path)\u001b[0m\n\u001b[1;32m   1386\u001b[0m       \u001b[0;32mreturn\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1387\u001b[0m     sess.run(self.saver_def.restore_op_name,\n\u001b[0;32m-> 1388\u001b[0;31m              {self.saver_def.filename_tensor_name: save_path})\n\u001b[0m\u001b[1;32m   1389\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1390\u001b[0m   \u001b[0;34m@\u001b[0m\u001b[0mstaticmethod\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/carnd/anaconda3/envs/carnd-term1/lib/python3.5/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36mrun\u001b[0;34m(self, fetches, feed_dict, options, run_metadata)\u001b[0m\n\u001b[1;32m    764\u001b[0m     \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    765\u001b[0m       result = self._run(None, fetches, feed_dict, options_ptr,\n\u001b[0;32m--> 766\u001b[0;31m                          run_metadata_ptr)\n\u001b[0m\u001b[1;32m    767\u001b[0m       \u001b[0;32mif\u001b[0m \u001b[0mrun_metadata\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    768\u001b[0m         \u001b[0mproto_data\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mtf_session\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mTF_GetBuffer\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mrun_metadata_ptr\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;32m/home/carnd/anaconda3/envs/carnd-term1/lib/python3.5/site-packages/tensorflow/python/client/session.py\u001b[0m in \u001b[0;36m_run\u001b[0;34m(self, handle, fetches, feed_dict, options, run_metadata)\u001b[0m\n\u001b[1;32m    919\u001b[0m           \u001b[0;32mexcept\u001b[0m \u001b[0mException\u001b[0m \u001b[0;32mas\u001b[0m \u001b[0me\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    920\u001b[0m             raise TypeError('Cannot interpret feed_dict key as Tensor: '\n\u001b[0;32m--> 921\u001b[0;31m                             + e.args[0])\n\u001b[0m\u001b[1;32m    922\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    923\u001b[0m           \u001b[0;32mif\u001b[0m \u001b[0misinstance\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0msubfeed_val\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mops\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mTensor\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+      "\u001b[0;31mTypeError\u001b[0m: Cannot interpret feed_dict key as Tensor: The name 'save/Const:0' refers to a Tensor which does not exist. The operation, 'save/Const', does not exist in the graph."
+     ]
+    }
+   ],
+   "source": [
+    "# Launch the model on the test data\n",
+    "with tf.Session() as sess:\n",
+    "    saver.restore(sess, './lenet.traffic.signs')\n",
+    "\n",
+    "    test_accuracy = sess.run(accuracy_operation, feed_dict={x: X_test, y: y_test, keep_prob : 1.0})\n",
+    "\n",
+    "print('Test Accuracy: {}'.format(test_accuracy))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Question 4\n",
+    "\n",
+    "_How did you train your model? (Type of optimizer, batch size, epochs, hyperparameters, etc.)_\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Answer:**"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Question 5\n",
+    "\n",
+    "\n",
+    "_What approach did you take in coming up with a solution to this problem? It may have been a process of trial and error, in which case, outline the steps you took to get to the final solution and why you chose those steps. Perhaps your solution involved an already well known implementation or architecture. In this case, discuss why you think this is suitable for the current problem._"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Answer:**"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "---\n",
+    "\n",
+    "## Step 3: Test a Model on New Images\n",
+    "\n",
+    "Take several pictures of traffic signs that you find on the web or around you (at least five), and run them through your classifier on your computer to produce example results. The classifier might not recognize some local signs but it could prove interesting nonetheless.\n",
+    "\n",
+    "You may find `signnames.csv` useful as it contains mappings from the class id (integer) to the actual sign name."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Implementation\n",
+    "\n",
+    "Use the code cell (or multiple code cells, if necessary) to implement the first step of your project. Once you have completed your implementation and are satisfied with the results, be sure to thoroughly answer the questions that follow."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "### Load the images and plot them here.\n",
+    "### Feel free to use as many code cells as needed."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Question 6\n",
+    "\n",
+    "_Choose five candidate images of traffic signs and provide them in the report. Are there any particular qualities of the image(s) that might make classification difficult? It could be helpful to plot the images in the notebook._\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Answer:**"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "### Run the predictions here.\n",
+    "### Feel free to use as many code cells as needed."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Question 7\n",
+    "\n",
+    "_Is your model able to perform equally well on captured pictures when compared to testing on the dataset? The simplest way to do this check the accuracy of the predictions. For example, if the model predicted 1 out of 5 signs correctly, it's 20% accurate._\n",
+    "\n",
+    "_**NOTE:** You could check the accuracy manually by using `signnames.csv` (same directory). This file has a mapping from the class id (0-42) to the corresponding sign name. So, you could take the class id the model outputs, lookup the name in `signnames.csv` and see if it matches the sign from the image._\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Answer:**"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "### Visualize the softmax probabilities here.\n",
+    "### Feel free to use as many code cells as needed."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Question 8\n",
+    "\n",
+    "*Use the model's softmax probabilities to visualize the **certainty** of its predictions, [`tf.nn.top_k`](https://www.tensorflow.org/versions/r0.12/api_docs/python/nn.html#top_k) could prove helpful here. Which predictions is the model certain of? Uncertain? If the model was incorrect in its initial prediction, does the correct prediction appear in the top k? (k should be 5 at most)*\n",
+    "\n",
+    "`tf.nn.top_k` will return the values and indices (class ids) of the top k predictions. So if k=3, for each sign, it'll return the 3 largest probabilities (out of a possible 43) and the correspoding class ids.\n",
+    "\n",
+    "Take this numpy array as an example:\n",
+    "\n",
+    "```\n",
+    "# (5, 6) array\n",
+    "a = np.array([[ 0.24879643,  0.07032244,  0.12641572,  0.34763842,  0.07893497,\n",
+    "         0.12789202],\n",
+    "       [ 0.28086119,  0.27569815,  0.08594638,  0.0178669 ,  0.18063401,\n",
+    "         0.15899337],\n",
+    "       [ 0.26076848,  0.23664738,  0.08020603,  0.07001922,  0.1134371 ,\n",
+    "         0.23892179],\n",
+    "       [ 0.11943333,  0.29198961,  0.02605103,  0.26234032,  0.1351348 ,\n",
+    "         0.16505091],\n",
+    "       [ 0.09561176,  0.34396535,  0.0643941 ,  0.16240774,  0.24206137,\n",
+    "         0.09155967]])\n",
+    "```\n",
+    "\n",
+    "Running it through `sess.run(tf.nn.top_k(tf.constant(a), k=3))` produces:\n",
+    "\n",
+    "```\n",
+    "TopKV2(values=array([[ 0.34763842,  0.24879643,  0.12789202],\n",
+    "       [ 0.28086119,  0.27569815,  0.18063401],\n",
+    "       [ 0.26076848,  0.23892179,  0.23664738],\n",
+    "       [ 0.29198961,  0.26234032,  0.16505091],\n",
+    "       [ 0.34396535,  0.24206137,  0.16240774]]), indices=array([[3, 0, 5],\n",
+    "       [0, 1, 4],\n",
+    "       [0, 5, 1],\n",
+    "       [1, 3, 5],\n",
+    "       [1, 4, 3]], dtype=int32))\n",
+    "```\n",
+    "\n",
+    "Looking just at the first row we get `[ 0.34763842,  0.24879643,  0.12789202]`, you can confirm these are the 3 largest probabilities in `a`. You'll also notice `[3, 0, 5]` are the corresponding indices."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Answer:**"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "> **Note**: Once you have completed all of the code implementations and successfully answered each question above, you may finalize your work by exporting the iPython Notebook as an HTML document. You can do this by using the menu above and navigating to  \\n\",\n",
+    "    \"**File -> Download as -> HTML (.html)**. Include the finished document along with this notebook as your submission."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "anaconda-cloud": {},
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.5.2"
+  },
+  "widgets": {
+   "state": {},
+   "version": "1.1.2"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 1
+}
